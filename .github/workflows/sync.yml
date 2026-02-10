@@ -40,7 +40,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Compare all files EXCEPT .github/ directory
-          if git diff --quiet HEAD upstream/$BRANCH -- . ':(exclude).github'; then
+          if git diff --quiet HEAD upstream/$BRANCH -- . ':(exclude).github' ':(exclude).npmrc'; then
             echo "🔍 No meaningful changes in upstream (ignoring .github/)."
             echo "status=no_update" >> $GITHUB_OUTPUT
           else
