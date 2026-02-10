@@ -1,0 +1,37 @@
+name: 🔄 Sync fork with upstream
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 每天 UTC 时间 3 点自动运行（即北京时间 11 点）
+  workflow_dispatch:     # 允许你手动点击运行
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout your fork
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # 获取完整历史
+
+      - name: 🔗 Set upstream remote
+        run: |
+          git remote add upstream https://github.com/openclaw/openclaw.git
+          git fetch upstream
+
+      - name: 🔄 Merge upstream into your default branch
+        run: |
+          # 替换为你的默认分支名，通常是 main 或 master
+          BRANCH="main"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 尝试合并，如果没变化或冲突就跳过
+          git merge upstream/$BRANCH || echo "⚠️ Merge failed or no changes."
+
+      - name: 📤 Push to your fork
+        run: |
+          BRANCH="main"
+          git push origin $BRANCH
