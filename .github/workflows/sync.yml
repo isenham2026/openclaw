@@ -2,8 +2,8 @@ name: 🔄 Sync fork with upstream
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # 每天 UTC 3点运行（北京时间 11点）
-  workflow_dispatch:     # 允许手动触发
+    - cron: '0 3 * * *'  # 每天 UTC 3点（北京时间 11点）
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -13,26 +13,62 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # 获取完整历史
+          fetch-depth: 0
 
-      - name: 🔗 Set upstream remote
+      - name: 🔗 Add upstream remote
         run: |
-          # 👇 替换为你 Fork 的原始仓库地址（重要！）
           git remote add upstream https://github.com/openclaw/openclaw.git
           git fetch upstream
+          echo "✅ Fetched upstream successfully."
 
-      - name: 🔄 Merge upstream into main
+      - name: 📋 Show current local and remote status
         run: |
-          BRANCH="main"  # 👈 如果原项目用 master，请改成 "master"
-          
+          echo "=== Local branch ==="
+          git log --oneline -3
+          echo ""
+          echo "=== Upstream/main ==="
+          git log --oneline upstream/main -3
+          echo ""
+          echo "=== Origin/main (your fork) ==="
+          git log --oneline origin/main -3
+
+      - name: 🔄 Try to merge upstream
+        id: merge
+        run: |
+          BRANCH="main"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 尝试合并 upstream/main 到本地
-          git merge upstream/$BRANCH || echo "No new changes or merge conflict."
 
-      - name: 📤 Force push to your fork
+          # 检查是否有差异
+          if git diff --quiet HEAD upstream/$BRANCH; then
+            echo "🔍 No changes between your branch and upstream."
+            echo "status=no_update" >> $GITHUB_OUTPUT
+          else
+            echo "📥 New commits detected in upstream. Merging..."
+            if git merge upstream/$BRANCH; then
+              echo "✅ Merge successful."
+              echo "status=updated" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Merge failed (likely conflict or non-fast-forward)."
+              echo "status=merge_failed" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+
+      - name: 📤 Push to your fork (if updated)
+        if: steps.merge.outputs.status == 'updated'
         run: |
-          BRANCH="main"  # 👈 同上，保持一致
-          # 使用 --force-with-lease 安全强制推送
+          BRANCH="main"
+          echo "📤 Pushing updates to your fork..."
           git push --force-with-lease origin $BRANCH
+          echo "✅ Successfully synced your fork with upstream!"
+
+      - name: ℹ️ No update needed
+        if: steps.merge.outputs.status == 'no_update'
+        run: |
+          echo "ℹ️ Your fork is already up-to-date with upstream. Nothing to do."
+
+      - name: ❌ Handle merge failure (optional)
+        if: failure() && steps.merge.outputs.status == 'merge_failed'
+        run: |
+          echo "🚨 Manual intervention may be required due to merge conflict."
