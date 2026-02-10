@@ -23,52 +23,52 @@ jobs:
 
       - name: 📋 Show current local and remote status
         run: |
-          echo "=== Local branch ==="
+          echo "=== Local branch (your main) ==="
           git log --oneline -3
           echo ""
           echo "=== Upstream/main ==="
           git log --oneline upstream/main -3
           echo ""
-          echo "=== Origin/main (your fork) ==="
+          echo "=== Origin/main (your fork on GitHub) ==="
           git log --oneline origin/main -3
 
-      - name: 🔄 Try to merge upstream
-        id: merge
+      - name: 🔄 Check for meaningful changes (ignore .github/)
+        id: check
         run: |
           BRANCH="main"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 检查是否有差异
-          if git diff --quiet HEAD upstream/$BRANCH; then
-            echo "🔍 No changes between your branch and upstream."
+          # Compare all files EXCEPT .github/ directory
+          if git diff --quiet HEAD upstream/$BRANCH -- . ':(exclude).github'; then
+            echo "🔍 No meaningful changes in upstream (ignoring .github/)."
             echo "status=no_update" >> $GITHUB_OUTPUT
           else
-            echo "📥 New commits detected in upstream. Merging..."
+            echo "📥 Meaningful changes detected in upstream. Merging..."
             if git merge upstream/$BRANCH; then
               echo "✅ Merge successful."
               echo "status=updated" >> $GITHUB_OUTPUT
             else
-              echo "❌ Merge failed (likely conflict or non-fast-forward)."
+              echo "❌ Merge failed (likely conflict)."
               echo "status=merge_failed" >> $GITHUB_OUTPUT
               exit 1
             fi
           fi
 
       - name: 📤 Push to your fork (if updated)
-        if: steps.merge.outputs.status == 'updated'
+        if: steps.check.outputs.status == 'updated'
         run: |
           BRANCH="main"
           echo "📤 Pushing updates to your fork..."
-          git push --force-with-lease origin $BRANCH
+          git push origin $BRANCH
           echo "✅ Successfully synced your fork with upstream!"
 
-      - name: ℹ️ No update needed
-        if: steps.merge.outputs.status == 'no_update'
+      - name: ℹ️ No meaningful update needed
+        if: steps.check.outputs.status == 'no_update'
         run: |
-          echo "ℹ️ Your fork is already up-to-date with upstream. Nothing to do."
+          echo "ℹ️ Your fork is already up-to-date with upstream (code-wise). Nothing to do."
 
-      - name: ❌ Handle merge failure (optional)
-        if: failure() && steps.merge.outputs.status == 'merge_failed'
+      - name: ❌ Handle merge failure
+        if: failure() && steps.check.outputs.status == 'merge_failed'
         run: |
           echo "🚨 Manual intervention may be required due to merge conflict."
