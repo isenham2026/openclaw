@@ -25,8 +25,8 @@ jobs:
           # 替换为你的默认分支名，通常是 main 或 master
           BRANCH="main"
           
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "isenham2026"
+          git config user.email "isenham.lsj@gmail.com"
           
           # 尝试合并，如果没变化或冲突就跳过
           git merge upstream/$BRANCH || echo "⚠️ Merge failed or no changes."
