@@ -41,7 +41,7 @@ jobs:
 
           # Compare all files EXCEPT .github/ directory
           if git diff --quiet HEAD upstream/$BRANCH -- . ':(exclude).github' ':(exclude).npmrc'; then
-            echo "🔍 No meaningful changes in upstream (ignoring .github/)."
+            echo "🔍 No meaningful changes in upstream (ignoring .github/ and .npmrc)."
             echo "status=no_update" >> $GITHUB_OUTPUT
           else
             echo "📥 Meaningful changes detected in upstream. Merging..."
