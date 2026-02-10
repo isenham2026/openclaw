@@ -2,8 +2,8 @@ name: 🔄 Sync fork with upstream
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 每天 UTC 时间 3 点自动运行（即北京时间 11 点）
-  workflow_dispatch:     # 允许你手动点击运行
+    - cron: '0 4 * * *'  # 每天 UTC 3点运行（北京时间 11点）
+  workflow_dispatch:     # 允许手动触发
 
 jobs:
   sync:
@@ -17,21 +17,22 @@ jobs:
 
       - name: 🔗 Set upstream remote
         run: |
+          # 👇 替换为你 Fork 的原始仓库地址（重要！）
           git remote add upstream https://github.com/openclaw/openclaw.git
           git fetch upstream
 
-      - name: 🔄 Merge upstream into your default branch
+      - name: 🔄 Merge upstream into main
         run: |
-          # 替换为你的默认分支名，通常是 main 或 master
-          BRANCH="main"
+          BRANCH="main"  # 👈 如果原项目用 master，请改成 "master"
           
-          git config user.name "isenham2026"
-          git config user.email "isenham.lsj@gmail.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 尝试合并，如果没变化或冲突就跳过
-          git merge upstream/$BRANCH || echo "⚠️ Merge failed or no changes."
+          # 尝试合并 upstream/main 到本地
+          git merge upstream/$BRANCH || echo "No new changes or merge conflict."
 
-      - name: 📤 Push to your fork
+      - name: 📤 Force push to your fork
         run: |
-          BRANCH="main"
-          git push origin $BRANCH
+          BRANCH="main"  # 👈 同上，保持一致
+          # 使用 --force-with-lease 安全强制推送
+          git push --force-with-lease origin $BRANCH
