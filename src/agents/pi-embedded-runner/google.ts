@@ -25,6 +25,7 @@ import {
 import type { TranscriptPolicy } from "../transcript-policy.js";
 import { resolveTranscriptPolicy } from "../transcript-policy.js";
 import { log } from "./logger.js";
+import { dropThinkingBlocks } from "./thinking.js";
 import { describeUnknownError } from "./utils.js";
 
 const GOOGLE_TURN_ORDERING_CUSTOM_TYPE = "google-turn-ordering-bootstrap";
@@ -50,6 +51,7 @@ const GOOGLE_SCHEMA_UNSUPPORTED_KEYWORDS = new Set([
   "minProperties",
   "maxProperties",
 ]);
+
 const ANTIGRAVITY_SIGNATURE_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 const INTER_SESSION_PREFIX_BASE = "[Inter-session message]";
 
@@ -424,6 +426,7 @@ export async function sanitizeSessionHistory(params: {
   modelApi?: string | null;
   modelId?: string;
   provider?: string;
+  allowedToolNames?: Iterable<string>;
   config?: OpenClawConfig;
   sessionManager: SessionManager;
   sessionId: string;
@@ -450,10 +453,15 @@ export async function sanitizeSessionHistory(params: {
       ...resolveImageSanitizationLimits(params.config),
     },
   );
-  const sanitizedThinking = policy.normalizeAntigravityThinkingBlocks
-    ? sanitizeAntigravityThinkingBlocks(sanitizedImages)
+  const droppedThinking = policy.dropThinkingBlocks
+    ? dropThinkingBlocks(sanitizedImages)
     : sanitizedImages;
-  const sanitizedToolCalls = sanitizeToolCallInputs(sanitizedThinking);
+  const sanitizedThinking = policy.sanitizeThinkingSignatures
+    ? sanitizeAntigravityThinkingBlocks(droppedThinking)
+    : droppedThinking;
+  const sanitizedToolCalls = sanitizeToolCallInputs(sanitizedThinking, {
+    allowedToolNames: params.allowedToolNames,
+  });
   const repairedTools = policy.repairToolUseResultPairing
     ? sanitizeToolUseResultPairing(sanitizedToolCalls)
     : sanitizedToolCalls;
